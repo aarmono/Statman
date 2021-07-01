@@ -9,6 +9,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Shapes;
+using System.Windows.Media;
 using Statman.Util;
 
 namespace Statman.Windows
@@ -23,11 +24,13 @@ namespace Statman.Windows
         private List<Control> m_EngineMenuItems;
 
         private bool m_DarkTheme;
+        private bool m_Transparent;
 
         public MainWindow()
         {
             string[] arguments = Environment.GetCommandLineArgs().Skip(1).ToArray();
-            m_DarkTheme = arguments.Length > 0 ? arguments[0] == "-dark" : false;
+            m_DarkTheme = arguments.Contains("-dark");
+            m_Transparent = arguments.Contains("-transparent");
 
             m_DefaultMenuItems = new List<Control>();
             m_ContextMenuItems = new ObservableCollection<Control>();
@@ -36,7 +39,7 @@ namespace Statman.Windows
             InitializeComponent();
 
             m_HasEngineControl = false;
-            AllowsTransparency = false;
+            AllowsTransparency = true;
 
             MainApp.MainWindow = this;
             MainApp.Loop.Start();
@@ -116,6 +119,9 @@ namespace Statman.Windows
             var s_ToggleTheme = new MenuItem() { Header = "Toggle Theme" };
             s_ToggleTheme.Click += OnToggleTheme;
 
+            var s_ToggleTransparency = new MenuItem() { Header = "Toggle Transparency" };
+            s_ToggleTransparency.Click += OnToggleTransparency;
+
             var s_CheckForUpdates = new MenuItem() { Header = "Check for Updates" };
             s_CheckForUpdates.Click += OnCheckForUpdates;
 
@@ -125,8 +131,20 @@ namespace Statman.Windows
             m_DefaultMenuItems.Add(s_Header);
             m_DefaultMenuItems.Add(new Separator());
             m_DefaultMenuItems.Add(s_ToggleTheme);
+            m_DefaultMenuItems.Add(s_ToggleTransparency);
             m_DefaultMenuItems.Add(s_CheckForUpdates);
             m_DefaultMenuItems.Add(s_Exit);
+        }
+
+        private void OnToggleTransparency(object sender, RoutedEventArgs e)
+        {
+            if (m_DarkTheme)
+                ThemeManager.SetCurrentTheme(this, new Uri("/Statman;component/Themes/DarkTheme.xaml", UriKind.Relative));
+            else
+                ThemeManager.SetCurrentTheme(this, new Uri("/Statman;component/Themes/DefaultTheme.xaml", UriKind.Relative));
+
+            ((Grid)Content).Background.Opacity = m_Transparent ? 1.0 : 0.0;
+            m_Transparent = !m_Transparent;
         }
 
         private void OnToggleTheme(object p_Sender, RoutedEventArgs p_RoutedEventArgs)
@@ -136,6 +154,7 @@ namespace Statman.Windows
             else
                 ThemeManager.SetCurrentTheme(this, new Uri("/Statman;component/Themes/DarkTheme.xaml", UriKind.Relative));
 
+            ((Grid)Content).Background.Opacity = m_Transparent ? 0.0 : 1.0;
             m_DarkTheme = !m_DarkTheme;
         }
 
@@ -180,6 +199,8 @@ namespace Statman.Windows
             var s_TitleBar = GetChildControl<Rectangle>("PART_TitleBar");
             s_TitleBar.ContextMenu = new ContextMenu { ItemsSource = m_ContextMenuItems };
             s_TitleBar.MouseLeftButtonDown += TitleBarOnMouseUp;
+
+            ((Grid)Content).Background.Opacity = m_Transparent ? 0.0 : 1.0;
         }
 
         private void TitleBarOnMouseUp(object p_Sender, MouseButtonEventArgs p_MouseButtonEventArgs)
